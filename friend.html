@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="상담">
+<meta name="theme-color" content="#2E6B6F">
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="/style.css">
+<title>상담</title>
+</head>
+<body>
+<button id="fs" class="fs" hidden></button>
+<main id="app"></main>
+<script src="/common.js"></script>
+<script>
+/* ---------- 친구 화면 ---------- */
+var MOODS=['😟 불안','😢 슬픔','😠 화남','🫥 외로움','😮‍💨 지침','😤 답답함','😶 무기력','🥺 서운함','😰 걱정','😳 당황','😊 기쁨','😌 평온'];
+
+var NEEDS=['그냥 들어주기','공감받기','조언 듣기','혼자만의 시간','쉬기','함께 있어주기','인정받기','안전하다는 느낌'];
+var ACTS=['물 마시고 숨 크게 쉬기 3번','10분 걷기','오늘 일찍 자기','믿는 사람에게 말하기','할 일 하나만 줄이기','좋아하는 음악 듣기','일주일 뒤에 다시 얘기하기'];
+
+var F={fstep:0,what:'',feel:'',moods:[],level:5,qi:0,needs:[],acts:[],custom:''};
+function fsave(k){var o={};o[k]=F[k];patch(o)}
+function fgo(d){F.fstep=Math.max(0,Math.min(6,F.fstep+d));fsave('fstep');frender();scrollTo(0,0)}
+function fpick(k,L,i,single){var a=F[k],v=L[i],p=a.indexOf(v);if(p>-1)a.splice(p,1);else{if(single)a.length=0;a.push(v)}fsave(k);frender()}
+function fchips(L,k,single){return '<div class="chips">'+L.map(function(x,i){return '<button class="chip'+(F[k].indexOf(x)>-1?' sel':'')+'" onclick="fpick(\''+k+'\','+k.toUpperCase()+'L,'+i+','+(single?1:0)+')">'+x+'</button>'}).join('')+'</div>'}
+var MOODSL=MOODS,NEEDSL=NEEDS,ACTSL=ACTS;
+function fnav(n){return '<div class="row"><button class="btn ghost" onclick="fgo(-1)">이전</button><button class="btn" onclick="fgo(1)">'+(n||'다음')+'</button></div>'}
+function frender(){
+  var s=F.fstep,o='<div class="bar">'+[0,1,2,3,4,5,6].map(function(i){return '<i class="'+(i<=s?'on':'')+'"></i>'}).join('')+'</div>';
+  if(s==0)o+='<h1>어떤 일이 있었어?</h1><p class="sub">생각나는 대로 편하게 적어.</p><textarea oninput="F.what=this.value;fsave(\'what\')">'+esc(F.what)+'</textarea><button class="btn" onclick="fgo(1)">다음</button>';
+  else if(s==1)o+='<h1>그때 기분이 어땠어?</h1><p class="sub">느낀 걸 적고, 해당되는 걸 눌러도 돼.</p><textarea class="sm" oninput="F.feel=this.value;fsave(\'feel\')">'+esc(F.feel)+'</textarea>'+fchips(MOODS,'moods')+fnav();
+  else if(s==2)o+='<h1>그 기분이 얼마나 컸어?</h1><p class="sub">0은 거의 없음, 10은 가장 큼.</p><p class="num" id="lv">'+F.level+'</p><input type="range" min="0" max="10" value="'+F.level+'" oninput="F.level=+this.value;$(\'lv\').textContent=F.level;fsave(\'level\')">'+fnav();
+  else if(s==3)o+='<h1>조금 더 생각해 보자</h1><p class="sub">와닿는 질문을 골라서 이야기해 봐.</p><div class="big">'+QS[F.qi]+'</div><button class="btn ghost" onclick="F.qi=(F.qi+1)%QS.length;fsave(\'qi\');frender()">다른 질문 ('+(F.qi+1)+'/'+QS.length+')</button>'+fnav();
+  else if(s==4)o+='<h1>지금 필요한 건?</h1><p class="sub">여러 개 골라도 돼.</p>'+fchips(NEEDS,'needs')+fnav();
+  else if(s==5)o+='<h1>오늘 해볼 것</h1><p class="sub">하나 골라 봐.</p>'+fchips(ACTS,'acts',1)+'<input type="text" placeholder="직접 적기 (선택)" value="'+esc(F.custom)+'" oninput="F.custom=this.value;fsave(\'custom\')">'+fnav('정리하기');
+  else o+='<h1>정리</h1><div class="sum"><div><small>있었던 일</small>'+(esc(F.what)||'—')+'</div><div><small>그때 기분</small>'+(esc(F.feel)||'—')+(F.moods.length?'\n'+F.moods.map(strip).join(', '):'')+' (크기 '+F.level+'/10)</div><div><small>지금 필요한 것</small>'+(F.needs.join(', ')||'—')+'</div><div><small>오늘 해볼 것</small>'+(esc(F.custom||F.acts[0])||'—')+'</div></div><div class="row"><button class="btn ghost" onclick="fgo(-1)">이전</button></div>';
+  $('app').innerHTML=o+FOOT;
+}
+function freset(){F={fstep:0,what:'',feel:'',moods:[],level:5,qi:0,needs:[],acts:[],custom:''}}
+function friend(){frender();var rev=null;connect(function(d,first){var r=d.rev||0;if(first){rev=r;['fstep','what','feel','moods','level','qi','needs','acts','custom'].forEach(function(k){if(d[k]!=null)F[k]=d[k]});frender()}else if(r!==rev){rev=r;pend={};freset();frender();scrollTo(0,0)}})}
+friend();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="상담">
+<meta name="theme-color" content="#2E6B6F">
+<link rel="manifest" href="/manifest-admin.json">
+<link rel="stylesheet" href="/style.css">
+<title>상담사용</title>
+</head>
+<body>
+<button id="fs" class="fs" hidden></button>
+<main id="app"></main>
+<script src="/common.js"></script>
+<script>
+document.querySelector('link[rel=manifest]').href='/manifest-admin.json?admin='+encodeURIComponent(new URLSearchParams(location.search).get('admin')||'');
+/* ---------- 상담사 화면 ---------- */
+var ST=[
+{t:'시작',act:'친구에게 폰을 넘겨요. 친구 화면은 1단계예요.',say:['편한 데서 얘기하자. 말하기 싫은 건 안 해도 돼.','시간 괜찮아? 30분쯤 해볼까?']},
+{t:'있었던 일 듣기',act:'친구가 적는 동안 기다려요. 위 칸에 적는 내용이 바로 보여요.',say:['다 적었어? 읽어줄래, 내가 읽어도 돼?','응, 계속 말해.','그래서 어떻게 됐어?'],note:'있었던 일 핵심'},
+{t:'그때 기분',act:'고른 감정을 그대로 되받아요.',say:['그때 기분은 어땠어?','그때 많이 (고른 감정) 했겠다.','그렇게 느낄 만해.'],note:'고른 감정'},
+{t:'기분의 크기',act:'친구가 정한 점수를 보고 물어요.',say:['지금도 그 정도야?','그 점수를 준 이유가 뭐야?'],note:'점수와 이유'},
+{t:'더 듣기',act:'친구 화면의 질문 카드. 질문은 2~3개만 이어가요.',say:['그 일에서 제일 마음에 걸리는 게 뭐야?','그때 하고 싶었던 말은 뭐였어?','비슷한 적 있었을 땐 어떻게 넘겼어?'],note:'새로 알게 된 것'},
+{t:'요약 확인',act:'들은 내용을 짧게 정리해서 말해요.',say:['내가 들은 건 이거야. 이게 맞아?','내가 놓친 거 있어?'],note:'요약',crisis:1},
+{t:'필요한 것',act:'친구가 고른 걸 보고 물어요.',say:['지금은 그냥 들어줄까, 같이 방법 찾아볼까?'],note:'친구가 한 말'},
+{t:'작은 방법',act:'방법은 친구가 고르게 해요.',say:['오늘 할 수 있는 거 하나만 고르면 뭐야?','내가 도울 수 있는 건 뭐가 있을까?'],note:'고른 것'},
+{t:'마무리',act:'친구 화면의 정리를 같이 봐요.',say:['얘기해줘서 좋았어.','며칠 뒤에 어떻게 지내는지 물어봐도 될까?'],date:1}
+];
+var C={cstep:0,notes:{},crisis:false,date:''},R={};
+function cgo(d){C.cstep=Math.max(0,Math.min(ST.length,C.cstep+d));patch({cstep:C.cstep});crender();scrollTo(0,0)}
+function live(){
+  var on=(R.online||{}).f>0,s=R.fstep||0,o='<div class="live"><div><small>친구 화면 · '+(on?'<span class="on">연결됨</span>':'아직 안 들어옴')+'</small>'+(s+1)+'/7 '+FN[s]+'</div>';
+  if(R.what)o+='<div><small>있었던 일</small>'+esc(R.what)+'</div>';
+  if(R.feel||(R.moods||[]).length)o+='<div><small>그때 기분</small>'+esc(R.feel||'')+((R.moods||[]).length?'\n'+R.moods.map(strip).join(', '):'')+'</div>';
+  if(s>=2)o+='<div><small>기분의 크기</small>'+(R.level==null?5:R.level)+'/10</div>';
+  if(s>=3)o+='<div><small>보고 있는 질문</small>'+QS[R.qi||0]+'</div>';
+  if((R.needs||[]).length)o+='<div><small>필요한 것</small>'+R.needs.join(', ')+'</div>';
+  if(R.custom||(R.acts||[])[0])o+='<div><small>오늘 해볼 것</small>'+esc(R.custom||R.acts[0])+'</div>';
+  return o+'</div>';
+}
+function crender(){
+  var n=ST.length+1,i=C.cstep,o='<div class="bar">';
+  for(var k=0;k<n;k++)o+='<i class="'+(k<=i?'on':'')+'"></i>';o+='</div>';
+  if(i==0)o+='<div class="live"><div><small>친구에게 보낼 링크</small>'+esc(location.origin+'/')+'</div></div><button class="btn ghost" onclick="cp()">링크 복사</button>';
+  o+='<div id="live">'+live()+'</div>';
+  if(i<ST.length){
+    var s=ST[i];
+    o+='<h1 style="margin-top:18px">'+s.t+'</h1><p class="sub">'+s.act+'</p><p class="lab">이렇게 말해요</p>'+s.say.map(function(x){return '<div class="say">'+x+'</div>'}).join('');
+    if(s.note)o+='<p class="lab">기록 ('+s.note+')</p><textarea class="sm" oninput="C.notes['+i+']=this.value;patch({notes:C.notes})">'+esc(C.notes[i])+'</textarea>';
+    if(s.crisis){o+='<button class="btn ghost" onclick="C.crisis=!C.crisis;patch({crisis:C.crisis});crender()">'+(C.crisis?'✓ ':'')+'죽음·자해 얘기가 나왔어요</button>';
+      if(C.crisis)o+='<div class="crisis"><b>지금 할 일</b><ul><li>혼자 두지 않기</li><li>직접 묻기: “혹시 죽고 싶다는 생각까지 들어?”</li><li>비밀로 해주겠다고 약속하지 않기</li><li>자살예방상담전화 109(24시간)를 같이 연결하기</li><li>당장 위험하면 112 또는 119</li><li>가족이나 믿을 만한 어른에게 알리기</li></ul></div>'}
+    if(s.date)o+='<p class="lab">다시 연락할 날</p><input type="date" value="'+C.date+'" oninput="C.date=this.value;patch({date:C.date})">';
+    o+='<div class="row">'+(i>0?'<button class="btn ghost" onclick="cgo(-1)">이전</button>':'')+'<button class="btn" onclick="cgo(1)">'+(i==ST.length-1?'기록 보기':'다음')+'</button></div>';
+  }else{
+    o+='<h1 style="margin-top:18px">상담 기록</h1><div class="sum">';
+    ST.forEach(function(s,k){if(s.note&&C.notes[k])o+='<div><small>'+s.t+'</small>'+esc(C.notes[k])+'</div>'});
+    o+='<div><small>다시 연락할 날</small>'+(C.date||'—')+'</div></div>'+(C.crisis?'<div class="crisis">죽음·자해 얘기가 있었어요. 109에 연결했는지, 믿을 사람에게 알렸는지 확인하세요.</div>':'')+'<button class="btn ghost" onclick="cpRec()">기록 복사</button><button class="btn" onclick="done()">완료 (데이터 지우기)</button><div class="row"><button class="btn ghost" onclick="cgo(-1)">이전</button></div>';
+  }
+  $('app').innerHTML=o+FOOT;
+}
+function cp(){var l=location.origin+'/';if(navigator.clipboard)navigator.clipboard.writeText(l).catch(function(){})}
+function recText(){var t='';ST.forEach(function(s,k){if(s.note&&C.notes[k])t+='['+s.t+'] '+C.notes[k]+'\n'});t+='[친구가 적은 것]\n있었던 일: '+(R.what||'')+'\n기분: '+(R.feel||'')+' '+((R.moods||[]).map(strip).join(', '))+' ('+(R.level==null?5:R.level)+'/10)\n필요한 것: '+((R.needs||[]).join(', '))+'\n오늘 해볼 것: '+(R.custom||(R.acts||[])[0]||'')+'\n다시 연락할 날: '+(C.date||'');return t}
+function cpRec(){if(navigator.clipboard)navigator.clipboard.writeText(recText()).catch(function(){})}
+function done(){if(confirm('완료하면 이 상담의 기록과 친구 화면이 모두 지워져요. 필요하면 먼저 기록을 복사하세요. 완료할까요?'))fetch('/api/reset?k='+encodeURIComponent(key),{method:'POST'})}
+function counselor(){crender();var rev=null;connect(function(d,first){R=d;var r=d.rev||0;if(first){rev=r;C.cstep=d.cstep||0;C.notes=d.notes||{};C.crisis=!!d.crisis;C.date=d.date||'';crender()}else if(r!==rev){rev=r;pend={};C={cstep:0,notes:{},crisis:false,date:''};crender();scrollTo(0,0)}else{var e=$('live');if(e)e.innerHTML=live()}})}
+counselor();
+
+</script>
+</body>
+</html>
