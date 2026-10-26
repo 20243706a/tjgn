@@ -3,16 +3,17 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';          // 설정하면 /?admin=키 로만 상담사 화면에 들어갈 수 있어요
-const FRIEND_KEYS = ['what','feel','moods','level','qi','needs','acts','custom','fstep'];
-const ADMIN_ONLY = ['pick','crisis','date','cstep','notes'];
-const fresh = rev => ({fstep:0, cstep:0, notes:{}, rev:rev||0});
+const FRIEND_KEYS = ['what','feel','moods','level','needs','acts','custom','think','agree','fdone'];
+const ADMIN_WRITE = ['cstep','msg','crisis','date','notes'];   // 상담사만 바꿀 수 있어요 (친구 화면은 cstep, msg를 받아서 보여줘요)
+const PRIVATE = ['crisis','date','notes'];                    // 친구에게는 보내지 않아요
+const fresh = rev => ({cstep:0, msg:'', notes:{}, rev:rev||0});
 let state = fresh();
 const clients = new Set();
 
 function payload(role) {
   const online = {c:0, f:0}; clients.forEach(c => online[c.role]++);
   const o = Object.assign({}, state, {online});
-  if (role !== 'c') ADMIN_ONLY.forEach(k => delete o[k]);   // 친구에게는 상담사 기록을 보내지 않아요
+  if (role !== 'c') PRIVATE.forEach(k => delete o[k]);   // 친구에게는 상담사 기록을 보내지 않아요
   return JSON.stringify(o);
 }
 function broadcast() { clients.forEach(c => c.res.write('data: ' + payload(c.role) + '\n\n')); }
@@ -44,7 +45,7 @@ http.createServer(async (req, res) => {
   if (req.method === 'POST' && u.pathname === '/api/patch') {
     try {
       const p = await body(req);
-      Object.keys(p).forEach(k => { if (FRIEND_KEYS.includes(k) || (ADMIN_ONLY.includes(k) && auth)) state[k] = p[k]; });
+      Object.keys(p).forEach(k => { if (FRIEND_KEYS.includes(k) || (ADMIN_WRITE.includes(k) && auth)) state[k] = p[k]; });
       broadcast(); res.writeHead(200); return res.end('ok');
     } catch (e) { res.writeHead(400); return res.end('bad'); }
   }
