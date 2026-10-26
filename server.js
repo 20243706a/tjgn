@@ -3,10 +3,10 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';          // 설정하면 /?admin=키 로만 상담사 화면에 들어갈 수 있어요
-const FRIEND_KEYS = ['what','feel','moods','level','needs','acts','custom','think','agree','fdone'];
-const ADMIN_WRITE = ['cstep','msg','crisis','date','notes'];   // 상담사만 바꿀 수 있어요 (친구 화면은 cstep, msg를 받아서 보여줘요)
+const FRIEND_KEYS = ['what','feel','moods','level','needs','acts','custom','think','agree','fdone','popack'];
+const ADMIN_WRITE = ['cstep','msg','pop','popid','crisis','date','notes'];   // 상담사만 바꿀 수 있어요 (친구 화면은 cstep, msg를 받아서 보여줘요)
 const PRIVATE = ['crisis','date','notes'];                    // 친구에게는 보내지 않아요
-const fresh = rev => ({cstep:0, msg:'', notes:{}, rev:rev||0});
+const fresh = rev => ({cstep:0, msg:'', pop:'', popid:0, notes:{}, rev:rev||0});
 let state = fresh();
 const clients = new Set();
 
