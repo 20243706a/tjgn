@@ -80,3 +80,6 @@ body.fsb main{padding-top:54px}
 .pd .chip{padding:8px 14px;min-height:40px;font-size:16px}
 .pd .chips{gap:8px;margin:4px 0 10px}
 .pd input[type=text]{font-size:17px;padding:12px 14px}
+div.say{background:var(--soft);border-radius:16px;padding:14px 16px;margin:0 0 10px;font-size:19px}
+@media (min-width:700px){div.say{font-size:21px;padding:16px 20px}}
+.say.sent.auto::after{content:"자동으로 표시 중"}
